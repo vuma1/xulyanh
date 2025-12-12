@@ -187,11 +187,6 @@ class PhotoLabApp:
                 font=("Segoe UI", 20, "bold"),
                 bg=COLORS['bg_panel'], 
                 fg=COLORS['text_primary']).pack(anchor="w")
-        
-        tk.Label(header_frame, text="Professional Photo Editor", 
-                font=("Segoe UI", 9),
-                bg=COLORS['bg_panel'], 
-                fg=COLORS['text_muted']).pack(anchor="w")
 
     def _create_section_header(self, text):
         """Tạo header cho mỗi section"""
