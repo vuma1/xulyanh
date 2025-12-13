@@ -35,7 +35,7 @@ class ImageProcessor:
         Điều chỉnh độ sáng và tương phản của ảnh
         
         Công thức:
-            - Tương phản: g(x) = (f(x) - 128) * alpha + 128
+            - Tương phản: g(x) = (f(x) - 128) * alpa + 128
             - Độ sáng: g(x) = f(x) + beta
         
         Tham số:

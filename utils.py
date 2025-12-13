@@ -94,6 +94,6 @@ def resize_image_to_fit(image, max_width=800, max_height=600):
     if ratio < 1:
         new_w = int(w * ratio)
         new_h = int(h * ratio)
-        return cv2.resize(image, (new_w, new_h))
+        return cv2.resize(image, (new_w, new_h)) # Với nội suy mặc định (bilinear)
     
     return image
