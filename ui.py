@@ -5,9 +5,19 @@ Chứa: buttons, windows, layout, theme colors
 import tkinter as tk
 from tkinter import ttk
 from PIL import Image, ImageTk
+import sys
+import os
 
 from processing import ImageProcessor
 from utils import load_image_dialog, save_image_dialog, resize_image_to_fit
+
+
+def get_resource_path(relative_path):
+    """Lấy đường dẫn tài nguyên, hỗ trợ cả khi chạy từ exe"""
+    if hasattr(sys, '_MEIPASS'):
+        # Đang chạy từ exe đóng gói bởi PyInstaller
+        return os.path.join(sys._MEIPASS, relative_path)
+    return os.path.join(os.path.dirname(__file__), relative_path)
 
 
 # === BẢNG MÀU THEME 2025 - Dark Modern ===
@@ -40,6 +50,13 @@ class PhotoLabApp:
         self.root.geometry("1200x700")
         self.root.minsize(1000, 600)
         self.root.configure(bg=COLORS['bg_dark'])
+        
+        # Set icon cho cửa sổ (taskbar + title bar)
+        try:
+            icon_path = get_resource_path("icon.ico")
+            self.root.iconbitmap(icon_path)
+        except:
+            pass  # Bỏ qua nếu không tìm thấy file icon
         
         # === BIẾN TRẠNG THÁI ẢNH ===
         self.display_image = None      # Ảnh đang hiển thị trên màn hình
