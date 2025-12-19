@@ -9,9 +9,8 @@ from ui import PhotoLabApp
 def main():
     """Khởi chạy ứng dụng PhotoLab"""
     root = tk.Tk()
-    app = PhotoLabApp(root)
-    root.mainloop()
-
+    app = PhotoLabApp(root) # Gắn widget root vào UI
+    root.mainloop() # Nếu thiếu dòng này → cửa sổ chớp lên rồi tắt
 
 if __name__ == "__main__":
     main()

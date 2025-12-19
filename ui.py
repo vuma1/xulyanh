@@ -122,52 +122,99 @@ class PhotoLabApp:
         self._create_section_header("🎨  Chỉnh sửa màu sắc")
         self.scale_brightness = self._create_slider("Độ sáng", -100, 100, 0)
         self.scale_contrast = self._create_slider("Tương phản", -100, 100, 0)
-        
+
+        # === LANDSCAPE ENHANCE ===
+        self._create_section_header("🏞️  Phong cảnh")
+        self.scale_vibrance = self._create_slider("Vibrance phong cảnh", -100, 100, 0)
+        self.scale_saturation = self._create_slider("Saturation", -100, 100, 0)
+
         # === FILTERS ===
         self._create_section_header("✨  Bộ lọc")
-        
         btn_grayscale = self._create_button(
             self.control_frame, "⚫  Trắng Đen",
             self._on_grayscale, COLORS['bg_card']
         )
         btn_grayscale.pack(fill=tk.X, padx=16, pady=4)
-        
         self.scale_sharpen = self._create_slider("Làm nét", 0, 20, 0)
+
         self.scale_blur = self._create_slider("Làm mờ", 0, 30, 0)
-        
+
+        # === BEAUTY / LÀM ĐẸP ===
+        self._create_section_header("💄  Làm đẹp")
+        self.scale_skin_smooth = self._create_slider("Làm mịn da", 0, 100, 0)
+        self.scale_bokeh = self._create_slider("Xóa phông", 0, 100, 0)
+
+        self.scale_warmth = self._create_slider("Độ ấm màu da", -50, 50, 0)
+
         # === TRANSFORM ===
         self._create_section_header("🔄  Biến đổi")
-        
         flip_frame = tk.Frame(self.control_frame, bg=COLORS['bg_panel'])
         flip_frame.pack(fill=tk.X, padx=16, pady=4)
-        
         btn_flip_h = self._create_button(
             flip_frame, "↔ Lật ngang",
             self._on_flip_horizontal, COLORS['bg_card'], small=True
         )
         btn_flip_h.pack(side=tk.LEFT, expand=True, fill=tk.X, padx=(0, 4))
-        
         btn_flip_v = self._create_button(
             flip_frame, "↕ Lật dọc",
             self._on_flip_vertical, COLORS['bg_card'], small=True
         )
         btn_flip_v.pack(side=tk.RIGHT, expand=True, fill=tk.X, padx=(4, 0))
-        
+
         # === ACTIONS ===
         self._create_section_header("💾  Lưu trữ")
-        
         btn_save = self._create_button(
             self.control_frame, "💾  Lưu ảnh",
             self._on_save_image, COLORS['accent_success']
         )
         btn_save.pack(fill=tk.X, padx=16, pady=4)
-        
         btn_reset = self._create_button(
             self.control_frame, "🔄  Reset về gốc",
             self._on_reset_image, COLORS['accent_danger']
         )
         btn_reset.pack(fill=tk.X, padx=16, pady=4)
-        
+        # Spacer
+        tk.Frame(self.control_frame, bg=COLORS['bg_panel'], height=30).pack(fill=tk.X)
+
+    def _on_landscape_enhance(self):
+        """Xử lý ảnh phong cảnh: tăng vibrance, saturation, sharpen, detail"""
+        if self.base_image is None:
+            return
+        vibrance = self.scale_vibrance.get()
+        saturation = self.scale_saturation.get()
+        sharpen = self.scale_sharpen.get()
+        # Gọi hàm xử lý ảnh phong cảnh
+        result = ImageProcessor.apply_landscape_enhance(
+            self.base_image, vibrance=vibrance, saturation=saturation, sharpen=sharpen, detail=10)
+        self.display_image = result
+        self._show_image(result)
+        # === TRANSFORM ===
+        self._create_section_header("🔄  Biến đổi")
+        flip_frame = tk.Frame(self.control_frame, bg=COLORS['bg_panel'])
+        flip_frame.pack(fill=tk.X, padx=16, pady=4)
+        btn_flip_h = self._create_button(
+            flip_frame, "↔ Lật ngang",
+            self._on_flip_horizontal, COLORS['bg_card'], small=True
+        )
+        btn_flip_h.pack(side=tk.LEFT, expand=True, fill=tk.X, padx=(0, 4))
+        btn_flip_v = self._create_button(
+            flip_frame, "↕ Lật dọc",
+            self._on_flip_vertical, COLORS['bg_card'], small=True
+        )
+        btn_flip_v.pack(side=tk.RIGHT, expand=True, fill=tk.X, padx=(4, 0))
+
+        # === ACTIONS ===
+        self._create_section_header("💾  Lưu trữ")
+        btn_save = self._create_button(
+            self.control_frame, "💾  Lưu ảnh",
+            self._on_save_image, COLORS['accent_success']
+        )
+        btn_save.pack(fill=tk.X, padx=16, pady=4)
+        btn_reset = self._create_button(
+            self.control_frame, "🔄  Reset về gốc",
+            self._on_reset_image, COLORS['accent_danger']
+        )
+        btn_reset.pack(fill=tk.X, padx=16, pady=4)
         # Spacer
         tk.Frame(self.control_frame, bg=COLORS['bg_panel'], height=30).pack(fill=tk.X)
 
@@ -364,14 +411,32 @@ class PhotoLabApp:
         self.scale_contrast.set(0)
         self.scale_sharpen.set(0)
         self.scale_blur.set(0)
+        self.scale_skin_smooth.set(0)
+        self.scale_bokeh.set(0)
+        self.scale_warmth.set(0)
+        self.scale_vibrance.set(0)
+        self.scale_saturation.set(0)
+    def _on_landscape_preset(self):
+        """Preset tăng cường phong cảnh: tăng vibrance, saturation, sharpen"""
+        self.scale_vibrance.set(60)
+        self.scale_saturation.set(30)
+        self.scale_sharpen.set(8)
+        self.scale_brightness.set(10)
+        self.scale_contrast.set(10)
+        self.scale_skin_smooth.set(0)
+        self.scale_bokeh.set(0)
+        self.scale_warmth.set(5)
 
     def _apply_all_filters(self):
         """
         Áp dụng tất cả các bộ lọc lên base_image theo thứ tự:
         1. Độ sáng & Tương phản
-        2. Làm nét (Sharpen)
-        3. Làm mờ (Blur)
-        4. Trắng đen (Grayscale)
+        2. Điều chỉnh tone màu da
+        3. Làm mịn da (Skin Smoothing)
+        4. Làm nét (Sharpen)
+        5. Làm mờ (Blur)
+        6. Xóa phông (Bokeh)
+        7. Trắng đen (Grayscale)
         """
         if self.base_image is None:
             return
@@ -382,19 +447,39 @@ class PhotoLabApp:
         b = self.scale_brightness.get()
         c = self.scale_contrast.get()
         result = ImageProcessor.apply_brightness_contrast(result, b, c)
+        # 1.5. Áp dụng vibrance & saturation cho phong cảnh
+        vibrance = self.scale_vibrance.get()
+        saturation = self.scale_saturation.get()
+        if vibrance != 0 or saturation != 0:
+            result = ImageProcessor.apply_vibrance_saturation(result, vibrance, saturation)
         
-        # 2. Áp dụng làm nét nếu giá trị > 0
+        # 2. Điều chỉnh tone màu da
+        warmth = self.scale_warmth.get()
+        if warmth != 0:
+            result = ImageProcessor.apply_skin_tone_correction(result, warmth)
+        
+        # 3. Áp dụng làm mịn da nếu giá trị > 0
+        skin_smooth = self.scale_skin_smooth.get()
+        if skin_smooth > 0:
+            result = ImageProcessor.apply_skin_smoothing(result, skin_smooth)
+        
+        # 4. Áp dụng làm nét nếu giá trị > 0
         sharpen = self.scale_sharpen.get()
         if sharpen > 0:
             result = ImageProcessor.apply_sharpen(result, sharpen)
         
-        # 3. Áp dụng làm mờ nếu giá trị > 0
+        # 5. Áp dụng làm mờ nếu giá trị > 0
         blur = self.scale_blur.get()
         if blur > 0:
             kernel_size = blur * 2 + 1  # Đảm bảo kernel size là số lẻ
             result = ImageProcessor.apply_blur(result, kernel_size)
         
-        # 4. Chuyển sang trắng đen nếu được bật
+        # 6. Áp dụng xóa phông nếu giá trị > 0
+        bokeh = self.scale_bokeh.get()
+        if bokeh > 0:
+            result = ImageProcessor.apply_bokeh_effect(result, bokeh)
+        
+        # 7. Chuyển sang trắng đen nếu được bật
         if self.is_grayscale:
             result = ImageProcessor.to_grayscale(result)
         

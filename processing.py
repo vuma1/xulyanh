@@ -7,6 +7,69 @@ import numpy as np
 
 
 class ImageProcessor:
+    @staticmethod
+    def apply_landscape_enhance(image, vibrance=60, saturation=30, sharpen=8, detail=10):
+        """
+        Tăng cường ảnh phong cảnh: màu sắc sống động, sắc nét, tăng chi tiết môi trường
+        - Tăng vibrance (ưu tiên màu chưa bão hòa)
+        - Tăng saturation vừa phải
+        - Làm nét (sharpen)
+        - Tăng chi tiết (detail enhancement)
+        Tham số mặc định phù hợp cho ảnh phong cảnh
+        """
+        result = image.copy()
+        # 1. Tăng vibrance & saturation
+        result = ImageProcessor.apply_vibrance_saturation(result, vibrance, saturation)
+        # 2. Làm nét (sharpen)
+        if sharpen > 0:
+            result = ImageProcessor.apply_sharpen(result, sharpen)
+        # 3. Tăng chi tiết môi trường (detail enhancement)
+        if detail > 0:
+            # Sử dụng kỹ thuật High Pass Filter để tăng chi tiết
+            gray = cv2.cvtColor(result, cv2.COLOR_RGB2GRAY)
+            # Lấy chi tiết cao tần
+            highpass = cv2.GaussianBlur(gray, 1, 3)
+            highpass = cv2.addWeighted(gray, 1.5, highpass, -0.5, 0)
+            # Ghép lại thành 3 kênh
+            highpass_color = cv2.cvtColor(highpass, cv2.COLOR_GRAY2RGB)
+            # Blend với ảnh gốc
+            result = cv2.addWeighted(result, 1.0, highpass_color, 0.25, 0)
+        return np.clip(result, 0, 255).astype(np.uint8)
+
+    @staticmethod
+    def apply_vibrance_saturation(image, vibrance=0, saturation=0):
+        """
+        Tăng cường độ rực rỡ (Vibrance) và độ bão hòa (Saturation) cho ảnh phong cảnh
+        - Vibrance chỉ tăng bão hòa cho các màu chưa bão hòa (giữ màu da tự nhiên)
+        - Saturation tăng đều cho mọi màu
+    
+        Tham số:
+            image: numpy array RGB
+            vibrance: -100 đến 100 (0 = không đổi)
+            saturation: -100 đến 100 (0 = không đổi)
+        """
+        if vibrance == 0 and saturation == 0:
+            return image.copy()
+        # Chuyển sang HSV để dễ thao tác
+        img_hsv = cv2.cvtColor(image, cv2.COLOR_RGB2HSV).astype(np.float32)
+        h, s, v = img_hsv[:,:,0], img_hsv[:,:,1], img_hsv[:,:,2]
+        # 1. Tăng Saturation đều
+        if saturation != 0:
+            sat_factor = 1.0 + (saturation / 100.0)
+            s = s * sat_factor
+        # 2. Tăng Vibrance: chỉ tăng cho pixel có S thấp
+        if vibrance != 0:
+            # Ngưỡng: S < 128 (chưa bão hòa)
+            mask = s < 128
+            vib_factor = 1.0 + (vibrance / 100.0)
+            s[mask] = s[mask] * vib_factor
+        # Clamp lại S về [0,255]
+        s = np.clip(s, 0, 255)
+        img_hsv[:,:,1] = s
+        # Ghép lại và chuyển về RGB
+        img_hsv = np.clip(img_hsv, 0, 255).astype(np.uint8)
+        result = cv2.cvtColor(img_hsv, cv2.COLOR_HSV2RGB)
+        return result
     """
     Class chứa các thuật toán xử lý ảnh
     Tất cả các phương thức đều là static - không cần khởi tạo instance
@@ -156,3 +219,117 @@ class ImageProcessor:
     def flip_vertical(image):
         """Lật ảnh theo chiều dọc (trên ↔ dưới)"""
         return cv2.flip(image, 0)
+
+    @staticmethod
+    def apply_skin_smoothing(image, strength=50):
+        """
+        Làm mịn da sử dụng Bilateral Filter
+        Ưu điểm: làm mờ các chi tiết nhỏ (mụn, nếp nhăn) nhưng giữ lại các cạnh sắc nét
+        
+        Tham số:
+            image: numpy array ảnh đầu vào
+            strength: độ mạnh làm mịn từ 0 đến 100
+            
+        Trả về:
+            numpy array ảnh đã làm mịn
+        """
+        if strength <= 0:
+            return image.copy()
+        
+        # Map strength (0-100) sang các tham số Bilateral Filter
+        # d: kích thước vùng lân cận (3-15)
+        d = int(3 + (strength / 100.0) * 12)
+        # sigmaColor: độ mạnh lọc theo màu (10-150)
+        sigma_color = 10 + (strength / 100.0) * 140
+        # sigmaSpace: độ mạnh lọc theo không gian (10-150)
+        sigma_space = 10 + (strength / 100.0) * 140
+        
+        # Áp dụng Bilateral Filter
+        result = cv2.bilateralFilter(image, d, sigma_color, sigma_space)
+        
+        return result
+
+    @staticmethod
+    def apply_bokeh_effect(image, blur_strength=50):
+        """
+        Hiệu ứng xóa phông (Bokeh Effect)
+        Làm mờ hậu cảnh trong khi giữ vùng trung tâm rõ nét
+        Sử dụng gradient mask hình elip để tạo độ chuyển tiếp mượt
+        
+        Tham số:
+            image: numpy array ảnh đầu vào
+            blur_strength: độ mạnh làm mờ hậu cảnh từ 0 đến 100
+            
+        Trả về:
+            numpy array ảnh với hiệu ứng xóa phông
+        """
+        if blur_strength <= 0:
+            return image.copy()
+        
+        h, w = image.shape[:2]
+        
+        # Tạo ảnh mờ cho hậu cảnh
+        # Map blur_strength (0-100) sang kernel size (5-101, số lẻ)
+        kernel_size = int(5 + (blur_strength / 100.0) * 96)
+        if kernel_size % 2 == 0:
+            kernel_size += 1
+        blurred = cv2.GaussianBlur(image, (kernel_size, kernel_size), 0)
+        
+        # Tạo gradient mask hình elip (vùng trung tâm sáng, viền tối)
+        center_x, center_y = w // 2, h // 2
+        # Kích thước vùng rõ nét (30-50% ảnh)
+        radius_x = int(w * 0.35)
+        radius_y = int(h * 0.4)
+        
+        # Tạo mask với gradient mượt
+        Y, X = np.ogrid[:h, :w]
+        # Tính khoảng cách chuẩn hóa từ tâm (ellipse)
+        dist = np.sqrt(((X - center_x) / radius_x) ** 2 + ((Y - center_y) / radius_y) ** 2)
+        
+        # Tạo gradient mask: 1 ở tâm, 0 ở viền, với độ chuyển tiếp mượt
+        mask = np.clip(1.5 - dist, 0, 1)
+        # Làm mượt thêm mask
+        mask = cv2.GaussianBlur(mask.astype(np.float32), (51, 51), 0)
+        
+        # Mở rộng mask thành 3 kênh
+        mask_3d = np.dstack([mask] * 3)
+        
+        # Blend ảnh gốc và ảnh mờ theo mask
+        result = (image.astype(np.float32) * mask_3d + 
+                  blurred.astype(np.float32) * (1 - mask_3d))
+        
+        return np.clip(result, 0, 255).astype(np.uint8)
+
+    @staticmethod
+    def apply_skin_tone_correction(image, warmth=0):
+        """
+        Điều chỉnh tone màu da (chỉ điều chỉnh độ ấm)
+        Tinh chỉnh các kênh màu đỏ và vàng để da trông ấm hơn hoặc lạnh hơn
+        
+        Tham số:
+            image: numpy array ảnh đầu vào (RGB)
+            warmth: độ ấm (-50 đến 50), dương = vàng ấm, âm = xanh lạnh
+            
+        Trả về:
+            numpy array ảnh đã điều chỉnh tone màu
+        """
+        if warmth == 0:
+            return image.copy()
+        
+        # Chuyển sang float để tính toán
+        img_float = image.astype(np.float32)
+        
+        # Tách các kênh RGB
+        r, g, b = img_float[:, :, 0], img_float[:, :, 1], img_float[:, :, 2]
+        
+        # Điều chỉnh độ ấm (tăng R và G, giảm B cho ấm; ngược lại cho lạnh)
+        warm_factor = warmth / 50.0 * 0.1  # ±10%
+        r = r * (1.0 + warm_factor)
+        g = g * (1.0 + warm_factor * 0.5)  # G tăng ít hơn
+        b = b * (1.0 - warm_factor)  # B giảm khi ấm
+        
+        # Ghép lại các kênh
+        result = np.dstack([r, g, b])
+        
+        # Clamp giá trị về [0, 255]
+        return np.clip(result, 0, 255).astype(np.uint8)
